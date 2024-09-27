@@ -1,0 +1,217 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Identity
+@using Telerik.DataSource
+@using Telerik.DataSource.Extensions
+@using Telerik.FontIcons;
+@using Telerik.SvgIcons
+@using System.Globalization;
+@using System.Resources;
+@using Microsoft.Extensions.Localization
+@using dxhome2.Components.Layout
+@using dxhome2.Locales
+
+@inject IServiceProvider ServiceProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JSRuntime
+@inject IStringLocalizer<Resources> localizer
+
+
+<style>
+    .my-tilelayout .k-tilelayout-item-header {
+        display: none;
+    }
+
+    h1 {
+        color: blue;
+        font-weight: bold;
+    }
+
+    .evenCulomn .oddCulom {
+        float: left;
+        width: 200px;
+    }
+</style>
+<PageTitle>FST Digital System</PageTitle>
+
+
+<TelerikCard>
+    <CardHeader Class="page">
+        <div class="d-flex justify-content-between py-1 px-5 border-bottom" style="color:green;font-size:20px;">
+            <DigitalClock></DigitalClock>
+            <h1>@localizer["DX_T_TITLE"]</h1>
+            <CultureSelector />
+        </div>
+    </CardHeader>
+
+    <CardBody>
+
+        <TelerikTileLayout Class="my-tilelayout"
+                           Columns="5"
+                           ColumnWidth=@gColumnWidth
+                           RowHeight="167px"
+                           Reorderable="true"
+                           Resizable="true">
+            <TileLayoutItems>
+
+                <TileLayoutItem HeaderText="FST">
+                    <Content>
+                        <TelerikButton OnClick="@GotoFST"><img style=@gStrSizeButton src="images/buttons/FST.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="Groupware">
+                    <Content>
+                        <TelerikButton OnClick="@GotoGroupware"><img style=@gStrSizeButton src="images/buttons/Groupware.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="HR System">
+                    <Content>
+                        <TelerikButton OnClick="@GotoHR"><img style=@gStrSizeButton src="images/buttons/HR System.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="SBMS">
+                    <Content>
+                        <TelerikButton OnClick="@GotoSBMS"><img style=@gStrSizeButton src="images/buttons/SBMS.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="PLM">
+                    <Content>
+                        <TelerikButton OnClick="@GotoPLM"><img style=@gStrSizeButton src="images/buttons/PLM.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+
+                <TileLayoutItem HeaderText="VISION">
+                    <Content>
+                        <TelerikButton OnClick="@GotoVision"><img style=@gStrSizeButton src="images/buttons/VISION.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="자가진단1">
+                    <Content>
+                        <TelerikButton OnClick="@GotoDiag1"><img style=@gStrSizeButton src="images/buttons/생산동 자가진단.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="자가진단2">
+                    <Content>
+                        <TelerikButton OnClick="@GotoDiag2"><img style=@gStrSizeButton src="images/buttons/본관동 자가진단.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="FIMS">
+                    <Content>
+                        <TelerikButton OnClick="@GotoFIMS"><img style=@gStrSizeButton src="images/buttons/검사시스템FIMS.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="CPK">
+                    <Content>
+                        <TelerikButton OnClick="@GotoCPK"><img style=@gStrSizeButton src="images/buttons/FIMS CPK.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="(해외)영업관리">
+                    <Content>
+                        <TelerikButton OnClick="@GotoSales"><img style=@gStrSizeButton src="images/buttons/해외영업관리.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="품질문서관리">
+                    <Content>
+                        <TelerikButton OnClick="@GotoFADoc"><img style=@gStrSizeButton src="images/buttons/품질관리문서.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="해외CS 작업일보">
+                    <Content>
+                        <TelerikButton OnClick="@GotoCs"><img style=@gStrSizeButton src="images/buttons/해외CS작업일보.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="SBMSViewer">
+                    <Content>
+                        <TelerikButton OnClick="@GotoSBMSViewer"><img style=@gStrSizeButton src="images/buttons/SBMS VIEWER.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="종합대시보드">
+                    <Content>
+                        <TelerikButton OnClick="@GotoDashboard"><img style=@gStrSizeButton src="images/buttons/대시보드.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+            </TileLayoutItems>
+        </TelerikTileLayout>
+
+    </CardBody>
+
+</TelerikCard>
+
+@code {
+    public int gImageWidth { get; set; } = 178;     // 60%: 178x106, 70%: 200x124, 80%: 228x142
+    private ResourceManager _resourceManager;
+    private string _localizedString;
+
+    private string gStrSizeButton { get; set; } = "width: 200px; height: 124px;";
+    private string gColumnWidth { get; set; } = "252px";
+
+    protected override void OnInitialized()
+    {
+        //_resourceManager = new ResourceManager("DxSystemHome.Resources.DxHome", ServiceProvider.GetService(typeof(DxSystemHome).Assembly));
+        //_localizedString = _resourceManager.GetString("DX_T_TITLE", CultureInfo.CurrentCulture);
+    }
+
+    void ItemResize()
+    {
+    }
+
+    async void GotoFST()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "https://www.fstc.co.kr", "_blank");
+    }
+    async void GotoGroupware()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "https://gw.fstc.co.kr/", "_blank");
+    }
+    async void GotoHR()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "https://www.ianhro.com/", "_blank");
+    }
+    async void GotoSBMS()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://sbms.fstc.co.kr:8090/", "_blank");
+    }
+    async void GotoPLM()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://plm.fstc.co.kr/Windchill/app/", "_blank");
+    }
+    async void GotoVision()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://vision.fstc.co.kr", "_blank");
+    }
+    async void GotoDiag1()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://diag1.fstc.co.kr", "_blank");
+    }
+    async void GotoDiag2()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://diag2.fstc.co.kr", "_blank");
+    }
+    async void GotoFIMS()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://192.168.24.249:5000", "_blank");
+    }
+    async void GotoCPK()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:5067", "_blank");
+    }
+    async void GotoSales()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:6500", "_blank");
+    }
+    async void GotoFADoc()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:7020", "_blank");
+    }
+    async void GotoCs()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:6600", "_blank");
+    }
+    async void GotoSBMSViewer()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:5066", "_blank");
+    }
+    async void GotoDashboard()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:6800", "_blank");
+    }
+}
