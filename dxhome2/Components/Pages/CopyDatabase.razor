@@ -48,12 +48,13 @@
                 foreach (DataRow table in tables.Rows)
                 {
                     string tableName = table["TABLE_NAME"].ToString();
-                    if (tableName.Contains("_TSLInvoiceItem") == false && tableName.Contains("_TDAItem") == false)
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem")
                         continue;
 
                     Console.WriteLine($"Generating script for table: {tableName}");
                     // Generate CREATE TABLE script for each table
                     string createTableScript = GenerateCreateTableScript(sourceConnection, tableName);
+                    Console.WriteLine("Generated Script = <" + createTableScript + ">");
 
                     // Execute script on target server
                     using (SqlConnection targetConnection = new SqlConnection(target_connectionString))
@@ -106,7 +107,7 @@
 
                     string tableName = row["TABLE_NAME"].ToString();
 
-                    if (tableName.Contains("_TSLInvoiceItem") == false && tableName.Contains("_TDAItem") == false)
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem")
                         continue;
                     //if (strNotMade.Contains(tableName) != true)
                     //    continue;
@@ -193,8 +194,10 @@
             }
 
             // Remove the last comma
+            Console.WriteLine("Before remove: " +  createTableScript.ToString());
             createTableScript.Length -= 3;
             createTableScript.AppendLine(");");
+            Console.WriteLine("After remove + Add: "+ createTableScript.ToString());
         }
 
         return createTableScript.ToString();
