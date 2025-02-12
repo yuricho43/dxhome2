@@ -1,0 +1,204 @@
+﻿@page "/copydb"
+@using Microsoft.AspNetCore.Identity
+@using System.Text
+@using System.Data
+@using Telerik.DataSource
+@using Telerik.DataSource.Extensions
+@using Telerik.FontIcons;
+@using Telerik.SvgIcons
+@using System.Globalization;
+@using System.Resources;
+@using Microsoft.Extensions.Localization
+@using dxhome2.Components.Layout
+@using dxhome2.Locales
+@using System.Data.SqlClient
+@using Microsoft.Data.SqlClient;
+@inject IConfiguration Configuration
+
+@inject IServiceProvider ServiceProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JSRuntime
+@inject IStringLocalizer<Resources> localizer
+
+<TelerikButton OnClick="@CreateTable">Table 생성</TelerikButton>
+<TelerikButton OnClick="@InsertTable">Data 복사</TelerikButton>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        //_resourceManager = new ResourceManager("DxSystemHome.Resources.DxHome", ServiceProvider.GetService(typeof(DxSystemHome).Assembly));
+        //_localizedString = _resourceManager.GetString("DX_T_TITLE", CultureInfo.CurrentCulture);
+    }
+
+    async void CreateTable()
+    {
+        Console.WriteLine("--- Create Table in FST");
+        int iNumTables = 0;
+        try
+        {
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSource");
+            string target_connectionString = Configuration.GetConnectionString("DefaultConnectionTarget");
+
+            using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
+            {
+                await sourceConnection.OpenAsync();
+                DataTable tables = sourceConnection.GetSchema("Tables");
+
+                foreach (DataRow table in tables.Rows)
+                {
+                    string tableName = table["TABLE_NAME"].ToString();
+                    if (tableName.Contains("_TSLInvoiceItem") == false && tableName.Contains("_TDAItem") == false)
+                        continue;
+
+                    Console.WriteLine($"Generating script for table: {tableName}");
+                    // Generate CREATE TABLE script for each table
+                    string createTableScript = GenerateCreateTableScript(sourceConnection, tableName);
+
+                    // Execute script on target server
+                    using (SqlConnection targetConnection = new SqlConnection(target_connectionString))
+                    {
+                        targetConnection.Open();
+                        using (SqlCommand command = new SqlCommand(createTableScript, targetConnection))
+                        {
+                            iNumTables++;
+                            command.ExecuteNonQuery();
+                            Console.WriteLine($"Table {tableName} created successfully on target database.");
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine("All tables created successfully! # Tables = " + iNumTables.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during table creation: " + ex.Message);
+        }
+    }
+
+    async void InsertTable()
+    {
+        Console.WriteLine("--- Insert Data into Tables in FST");
+        int iNum = 0;
+        int iTotalTime = 0;
+        int iDuration = 0;
+        DateTime dtStart = DateTime.Now;
+
+        try
+        {
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSource");
+            string target_connectionString = Configuration.GetConnectionString("DefaultConnectionTarget");
+
+            using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
+            {
+                sourceConnection.Open();
+
+                // 모든 테이블 이름 가져오기
+                DataTable tables = sourceConnection.GetSchema("Tables");
+
+                int iTotal = tables.Rows.Count;
+                Console.WriteLine($"{iTotal} will be created");
+
+                foreach (DataRow row in tables.Rows)
+                {
+                    dtStart = DateTime.Now;
+
+                    string tableName = row["TABLE_NAME"].ToString();
+
+                    if (tableName.Contains("_TSLInvoiceItem") == false && tableName.Contains("_TDAItem") == false)
+                        continue;
+                    //if (strNotMade.Contains(tableName) != true)
+                    //    continue;
+                    Console.WriteLine($"Migrating table: {tableName}");
+
+                    // 1) 테이블 데이터 삭제
+
+                    // 테이블 데이터를 읽어오기
+
+                    using (SqlCommand selectCommand = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
+                    using (SqlDataReader reader = selectCommand.ExecuteReader())
+                    {
+                        // 타겟 서버에 복사하기
+                        using (SqlConnection targetConnection = new SqlConnection(target_connectionString))
+                        {
+                            targetConnection.Open();
+
+                            //--- target table data 삭제
+                            string deleteQuery = $"DELETE FROM {tableName}"; // Query to delete all rows
+                            using (SqlCommand command = new SqlCommand(deleteQuery, targetConnection))
+                            {
+                                int rowsAffected = command.ExecuteNonQuery();
+                                Console.WriteLine($"Deleted {rowsAffected} rows from the table {tableName}.");
+                            }
+                            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConnection))
+                            {
+                                bulkCopy.BulkCopyTimeout = 600; // 10분으로 제한 시간 설정
+                                bulkCopy.DestinationTableName = tableName;
+                                bulkCopy.WriteToServer(reader);
+                                iNum++;
+                            }
+                            TimeSpan dtSpan = DateTime.Now - dtStart;
+                            Console.WriteLine($"{iNum}. {tableName} data inserted." + dtSpan.ToString() + "Elapsed");
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine(iNum.ToString() + " table data inserted successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during migration: " + ex.Message);
+        }
+    }
+
+    private string GenerateCreateTableScript(SqlConnection connection, string tableName)
+    {
+        StringBuilder createTableScript = new StringBuilder();
+
+        // Query to get column information
+        string query = $@"
+                SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = '{tableName}'";
+
+        using (SqlCommand command = new SqlCommand(query, connection))
+        using (SqlDataReader reader = command.ExecuteReader())
+        {
+            createTableScript.AppendLine($"CREATE TABLE {tableName} (");
+
+            while (reader.Read())
+            {
+                string columnName = reader["COLUMN_NAME"].ToString();
+                string dataType = reader["DATA_TYPE"].ToString();
+                string isNullable = reader["IS_NULLABLE"].ToString();
+                string nullable = isNullable == "YES" ? "NULL" : "NOT NULL";
+
+                string strMax = reader["CHARACTER_MAXIMUM_LENGTH"].ToString();
+
+                int maxLength = 100;
+                if (int.TryParse(reader["CHARACTER_MAXIMUM_LENGTH"].ToString(), out maxLength) && maxLength > 0)
+                {
+                    createTableScript.AppendLine($"    {columnName} {dataType}({maxLength}) {nullable},");
+                }
+                else if (int.TryParse(reader["CHARACTER_MAXIMUM_LENGTH"].ToString(), out maxLength) && maxLength == -1)
+                {
+                    createTableScript.AppendLine($"    {columnName} {dataType}(max) {nullable},");
+                }
+                else
+                {
+                    createTableScript.AppendLine($"    {columnName} {dataType} {nullable},");
+                }
+            }
+
+            // Remove the last comma
+            createTableScript.Length -= 3;
+            createTableScript.AppendLine(");");
+        }
+
+        return createTableScript.ToString();
+    }
+
+
+}
