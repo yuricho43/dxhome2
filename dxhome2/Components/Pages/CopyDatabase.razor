@@ -55,7 +55,7 @@
                     string tableName = table["TABLE_NAME"].ToString();
                     Console.WriteLine("{0}. Table Name =({1}) ", ix,tableName);
 
-                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
                         continue;
 
                     Console.WriteLine($"Generating script for table: {tableName}");
@@ -114,7 +114,7 @@
 
                     string tableName = row["TABLE_NAME"].ToString();
 
-                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
                         continue;
                     //if (strNotMade.Contains(tableName) != true)
                     //    continue;
