@@ -212,7 +212,7 @@
 
     async void CreateTableSBMS()
     {
-        Console.WriteLine("--- Create Table in FST");
+        Console.WriteLine("--- Create Table in SBMSPROD");
         int iNumTables = 0;
         int ix = 0;
         try
@@ -232,8 +232,8 @@
                     string tableName = table["TABLE_NAME"].ToString();
                     Console.WriteLine("{0}. Table Name =({1}) ", ix, tableName);
 
-                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
-                        continue;
+                    //if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
+                    //    continue;
 
                     Console.WriteLine($"Generating script for table: {tableName}");
                     // Generate CREATE TABLE script for each table
