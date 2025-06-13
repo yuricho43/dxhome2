@@ -272,7 +272,7 @@
 
         try
         {
-            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourcSBMS");
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourceSBMS");
             string target_connectionString = Configuration.GetConnectionString("DefaultConnectionTargetSBMS");
 
             using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
