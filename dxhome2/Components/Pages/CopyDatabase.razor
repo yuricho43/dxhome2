@@ -20,8 +20,10 @@
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<Resources> localizer
 
-<TelerikButton OnClick="@CreateTable">Table 생성</TelerikButton>
-<TelerikButton OnClick="@InsertTable">Data 복사</TelerikButton>
+<TelerikButton OnClick="@CreateTable">ERP Table 생성</TelerikButton>
+<TelerikButton OnClick="@InsertTable">ERP Data 복사</TelerikButton>
+<TelerikButton OnClick="@CreateTableSBMS">SBMS Table 생성</TelerikButton>
+<TelerikButton OnClick="@InsertTableSBMS">SBMS Data 복사</TelerikButton>
 
 @code {
 
@@ -53,7 +55,7 @@
                     string tableName = table["TABLE_NAME"].ToString();
                     Console.WriteLine("{0}. Table Name =({1}) ", ix,tableName);
 
-                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem")
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
                         continue;
 
                     Console.WriteLine($"Generating script for table: {tableName}");
@@ -112,7 +114,7 @@
 
                     string tableName = row["TABLE_NAME"].ToString();
 
-                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem")
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
                         continue;
                     //if (strNotMade.Contains(tableName) != true)
                     //    continue;
@@ -206,6 +208,132 @@
         }
 
         return createTableScript.ToString();
+    }
+
+    async void CreateTableSBMS()
+    {
+        Console.WriteLine("--- Create Table in FST");
+        int iNumTables = 0;
+        int ix = 0;
+        try
+        {
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourceSBMS");
+            string target_connectionString = Configuration.GetConnectionString("DefaultConnectionTargetSBMS");
+
+            using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
+            {
+                await sourceConnection.OpenAsync();
+                DataTable tables = sourceConnection.GetSchema("Tables");
+                Console.WriteLine("--- # of Tables = {0}", tables.Rows.Count);
+
+                foreach (DataRow table in tables.Rows)
+                {
+                    ix++;
+                    string tableName = table["TABLE_NAME"].ToString();
+                    Console.WriteLine("{0}. Table Name =({1}) ", ix, tableName);
+
+                    if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
+                        continue;
+
+                    Console.WriteLine($"Generating script for table: {tableName}");
+                    // Generate CREATE TABLE script for each table
+                    string createTableScript = GenerateCreateTableScript(sourceConnection, tableName);
+                    Console.WriteLine("Generated Script = <" + createTableScript + ">");
+
+                    // Execute script on target server
+                    using (SqlConnection targetConnection = new SqlConnection(target_connectionString))
+                    {
+                        targetConnection.Open();
+                        using (SqlCommand command = new SqlCommand(createTableScript, targetConnection))
+                        {
+                            iNumTables++;
+                            command.ExecuteNonQuery();
+                            Console.WriteLine($"Table {tableName} created successfully on target database.");
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine("All tables created successfully! # Tables = " + iNumTables.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during table creation: " + ex.Message);
+        }
+    }
+
+    async void InsertTableSBMS()
+    {
+        Console.WriteLine("--- Insert Data into Tables in SBMSPROD");
+        int iNum = 0;
+        int iTotalTime = 0;
+        int iDuration = 0;
+        DateTime dtStart = DateTime.Now;
+
+        try
+        {
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourcSBMS");
+            string target_connectionString = Configuration.GetConnectionString("DefaultConnectionTargetSBMS");
+
+            using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
+            {
+                sourceConnection.Open();
+
+                // 모든 테이블 이름 가져오기
+                DataTable tables = sourceConnection.GetSchema("Tables");
+
+                int iTotal = tables.Rows.Count;
+                Console.WriteLine($"{iTotal} will be created");
+
+                foreach (DataRow row in tables.Rows)
+                {
+                    dtStart = DateTime.Now;
+
+                    string tableName = row["TABLE_NAME"].ToString();
+
+                    //if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem")
+                    //    continue;
+                    Console.WriteLine($"Migrating table: {tableName}");
+
+                    // 1) 테이블 데이터 삭제
+
+                    // 테이블 데이터를 읽어오기
+
+                    using (SqlCommand selectCommand = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
+                    using (SqlDataReader reader = selectCommand.ExecuteReader())
+                    {
+                        // 타겟 서버에 복사하기
+                        using (SqlConnection targetConnection = new SqlConnection(target_connectionString))
+                        {
+                            targetConnection.Open();
+
+                            //--- target table data 삭제
+                            string deleteQuery = $"DELETE FROM {tableName}"; // Query to delete all rows
+                            using (SqlCommand command = new SqlCommand(deleteQuery, targetConnection))
+                            {
+                                int rowsAffected = command.ExecuteNonQuery();
+                                Console.WriteLine($"Deleted {rowsAffected} rows from the table {tableName}.");
+                            }
+                            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConnection))
+                            {
+                                bulkCopy.BulkCopyTimeout = 600; // 10분으로 제한 시간 설정
+                                bulkCopy.DestinationTableName = tableName;
+                                bulkCopy.WriteToServer(reader);
+                                iNum++;
+                            }
+                            TimeSpan dtSpan = DateTime.Now - dtStart;
+                            Console.WriteLine($"{iNum}. {tableName} data inserted." + dtSpan.ToString() + "Elapsed");
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine(iNum.ToString() + " table data inserted successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during migration: " + ex.Message);
+        }
     }
 
 
