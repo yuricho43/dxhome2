@@ -109,11 +109,13 @@
                         <TelerikButton OnClick="@GotoSales"><img style=@gStrSizeButton src="images/buttons/해외영업관리.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
-                <TileLayoutItem HeaderText="품질문서관리">
+                @*
+                <TileLayoutItem HeaderText="제조통계">
                     <Content>
                         <TelerikButton OnClick="@GotoFADoc"><img style=@gStrSizeButton src="images/buttons/품질관리문서.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
+                *@
                 <TileLayoutItem HeaderText="해외CS 작업일보">
                     <Content>
                         <TelerikButton OnClick="@GotoCs"><img style=@gStrSizeButton src="images/buttons/해외CS작업일보.jpg" /></TelerikButton>
@@ -188,7 +190,7 @@
     }
     async void GotoFIMS()
     {
-        await JSRuntime.InvokeVoidAsync("open", "http://192.168.24.249:5000", "_blank");
+        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:5000", "_blank");
     }
     async void GotoCPK()
     {
@@ -196,7 +198,7 @@
     }
     async void GotoSales()
     {
-        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:6500", "_blank");
+        await JSRuntime.InvokeVoidAsync("open", "http://192.168.30.243:6500", "_blank");
     }
     async void GotoFADoc()
     {
@@ -208,10 +210,10 @@
     }
     async void GotoSBMSViewer()
     {
-        await JSRuntime.InvokeVoidAsync("open", "http://fims.fstc.co.kr:5066", "_blank");
+        await JSRuntime.InvokeVoidAsync("open", "http://192.168.27.237:5066", "_blank");
     }
     async void GotoDashboard()
     {
-        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:6800", "_blank");
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:6600", "_blank");
     }
 }

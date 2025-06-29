@@ -28,7 +28,7 @@
 @code {
     List<string> gTableNames = new List<string> { 
             "_TSLInvoiceItem", 
-            "_TDAItem", 
+            "_TSLInvoice", 
             "_TDAItem", 
             "_TDACust", 
             "_TSLBill",
@@ -57,7 +57,7 @@
             {
                 await sourceConnection.OpenAsync();
                 DataTable tables = sourceConnection.GetSchema("Tables");
-                Console.WriteLine("--- # of Tables = {0}", tables.Rows.Count);
+                //Console.WriteLine("--- # of Tables = {0}", tables.Rows.Count);
 
                 foreach (DataRow table in tables.Rows)
                 {
