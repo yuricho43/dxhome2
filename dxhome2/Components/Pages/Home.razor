@@ -104,6 +104,11 @@
                         <TelerikButton OnClick="@GotoCPK"><img style=@gStrSizeButton src="images/buttons/FIMS CPK.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
+                <TileLayoutItem HeaderText="수리FIMS">
+                    <Content>
+                        <TelerikButton OnClick="@GotoFIMSModify"><img style=@gStrSizeButton src="images/buttons/수리검사시스템FIMS.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
                 <TileLayoutItem HeaderText="(해외)영업관리">
                     <Content>
                         <TelerikButton OnClick="@GotoSales"><img style=@gStrSizeButton src="images/buttons/해외영업관리.jpg" /></TelerikButton>
@@ -195,6 +200,10 @@
     async void GotoCPK()
     {
         await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:5067", "_blank");
+    }
+    async void GotoFIMSModify()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:5100", "_blank");
     }
     async void GotoSales()
     {
