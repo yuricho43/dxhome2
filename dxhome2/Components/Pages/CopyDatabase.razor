@@ -24,6 +24,9 @@
 <TelerikButton OnClick="@InsertTable">ERP Data 복사</TelerikButton>
 <TelerikButton OnClick="@CreateTableSBMS">SBMS Table 생성</TelerikButton>
 <TelerikButton OnClick="@InsertTableSBMS">SBMS Data 복사</TelerikButton>
+<TelerikButton OnClick="@BOMTest">BOM Test</TelerikButton>
+
+<h4>BOM#=@tCountBom</h4>
 
 @code {
     List<string> gTableNames = new List<string> { 
@@ -37,6 +40,8 @@
             "_TSLSales",
             "_TDASMinorValue"
     };
+
+    int tCountBom = 0;
 
     protected override void OnInitialized()
     {
@@ -67,7 +72,7 @@
                     Console.WriteLine("{0}. Table Name =({1}) ", ix,tableName);
 
                     if (gTableNames.Contains(tableName) != true)
-                    // if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
+                        // if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
                         continue;
 
                     Console.WriteLine($"Generating script for table: {tableName}");
@@ -127,7 +132,7 @@
                     string tableName = row["TABLE_NAME"].ToString();
 
                     if (gTableNames.Contains(tableName) != true)
-                    //if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
+                        //if (tableName != "_TSLInvoiceItem" && tableName != "_TDAItem" && tableName != "_TDAItem" && tableName != "_TDACust" && tableName != "_TSLBill")
                         continue;
                     //if (strNotMade.Contains(tableName) != true)
                     //    continue;
@@ -346,6 +351,137 @@
         catch (Exception ex)
         {
             Console.WriteLine("Error during migration: " + ex.Message);
+        }
+    }
+
+    async void BOMTest()
+    {
+
+        string strQuery = $@"WITH MRP_SUM_TRIMMED AS ( 
+        SELECT
+     COMP_PART_NO,
+     ASSY_PART_NO,
+     COMP_QTY,
+     TB_CD,
+     PART_VER,
+         LTRIM(RTRIM(COMP_PART_NO)) AS COMP_NO_TRIM,
+     LTRIM(RTRIM(ASSY_PART_NO)) AS ASSY_NO_TRIM
+     FROM MRP_MST
+     WHERE MRP_WORK_DT = '202511041352365cbf3a3066582bfc14'
+     and fsc_Cd = 'FSTR-ACKS100000-015'
+     and fsc_ver = '001'
+     GROUP BY COMP_PART_NO, ASSY_PART_NO, COMP_QTY, TB_CD, PART_VER
+     )
+ ,CTE AS(
+     SELECT
+     COMP_NO_TRIM, ASSY_NO_TRIM, COMP_QTY, TB_CD, PART_VER,
+         1 AS LEVEL,
+     CAST(COMP_QTY AS DECIMAL(20, 1)) AS qty_accumulated
+     FROM MRP_SUM_TRIMMED
+     UNION ALL
+     SELECT
+         A.COMP_NO_TRIM, B.ASSY_NO_TRIM, B.COMP_QTY, B.TB_CD, A.PART_VER,
+     A.LEVEL + 1,
+     CAST(A.qty_accumulated * B.COMP_QTY AS DECIMAL(20, 1))
+     FROM CTE AS A
+     JOIN MRP_SUM_TRIMMED AS B
+         ON B.COMP_NO_TRIM = A.ASSY_NO_TRIM
+     )
+ ,AGG AS(
+     SELECT
+     L.COMP_NO_TRIM AS COMP_PART_NO,
+     SUM(ct.qty_accumulated) AS sumQty,
+     ct.PART_VER AS partVer
+     FROM CTE ct
+     JOIN (
+     SELECT DISTINCT COMP_NO_TRIM AS COMP_NO_TRIM
+     FROM MRP_SUM_TRIMMED ms
+     WHERE NOT EXISTS (
+     SELECT 1
+         FROM(
+     SELECT DISTINCT ASSY_NO_TRIM AS PARENT_NO
+     FROM MRP_SUM_TRIMMED
+     WHERE ASSY_NO_TRIM IS NOT NULL AND ASSY_NO_TRIM & != ''
+ ) p
+     WHERE p.PARENT_NO = ms.COMP_PART_NO
+     )
+     )L
+     ON L.COMP_NO_TRIM = ct.COMP_NO_TRIM
+     WHERE NOT EXISTS(
+     SELECT 1
+     FROM MRP_SUM_TRIMMED ms
+     WHERE ms.COMP_NO_TRIM = ct.ASSY_NO_TRIM
+     )
+     GROUP BY L.COMP_NO_TRIM, ct.PART_VER
+     )
+ ,TB_AGG AS(
+     SELECT
+     a.COMP_PART_NO,
+     STUFF((
+         SELECT DISTINCT ',' + cd_tb.DESC_KOR
+             FROM CTE ct2
+         LEFT JOIN CODE_DTL cd_tb
+         ON cd_tb.CD_TYPE = 'TB'
+             AND cd_tb.CD_DATA = ct2.TB_CD
+             WHERE a.COMP_PART_NO = ct2.COMP_NO_TRIM
+             FOR XML PATH(''), TYPE
+         ).value('.', 'nvarchar(max)'), 1, 1, '') AS tbNm
+     FROM AGG a
+     )
+ SELECT
+     a.COMP_PART_NO AS compPartNo,
+     a.sumQty,
+     t.tbNm,
+     a.partVer,
+     pm.PART_NM AS partNm,
+     (select DESC_KOR from CODE_DTL cd where CD_TYPE = 'BT' AND CD_DATA = pm.BOM_TYPE_CD ) as bomTypeNm,
+     pm.SECTION_NM AS sectionNm,
+     pm.PART_SPEC AS partSpec,
+     pm.MAKER_NM AS makerNm,
+     pm.MATERIAL AS material,
+     pm.FINISH AS finish,
+     pm.OLD_PART_NO AS oldCompPartNo
+ FROM AGG a
+     JOIN TB_AGG t
+     ON t.COMP_PART_NO = a.COMP_PART_NO
+     JOIN PART_MST pm
+     ON pm.PART_NO = a.COMP_PART_NO
+     WHERE NOT EXISTS(SELECT 1 FROM UPGVC_MST um WHERE um.UPGVC_NO = a.COMP_PART_NO)
+     ORDER BY a.COMP_PART_NO; ";
+
+        tCountBom = -1; // 임시
+        Console.WriteLine("--- BOM Test");
+
+        try
+        {
+            string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourceSBMS");
+
+            using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
+            {
+                sourceConnection.Open();
+
+                // 테이블 데이터를 읽어오기
+
+                using (SqlCommand selectCommand = new SqlCommand(strQuery, sourceConnection))
+                using (SqlDataReader reader = selectCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        // 예시: 첫 번째 컬럼 값 읽기
+                        var col1 = reader[0];   // index로 읽기
+                        var col2 = reader[1];   // 컬럼명으로 읽기
+
+                        Console.WriteLine($"{col1}, {col2}");
+                        tCountBom++;
+                    }
+                }
+            }
+
+            Console.WriteLine("   * End of BOM Test. Count = {0}", tCountBom);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during BOM Test: " + ex.Message);
         }
     }
 
