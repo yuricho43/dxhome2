@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Identity
 @using System.Text
 @using System.Data
+@using System.Diagnostics
 @using Telerik.DataSource
 @using Telerik.DataSource.Extensions
 @using Telerik.FontIcons;
@@ -359,18 +360,20 @@
 
         string strQuery = $@"WITH MRP_SUM_TRIMMED AS ( 
         SELECT
-     COMP_PART_NO,
-     ASSY_PART_NO,
-     COMP_QTY,
-     TB_CD,
-     PART_VER,
-         LTRIM(RTRIM(COMP_PART_NO)) AS COMP_NO_TRIM,
-     LTRIM(RTRIM(ASSY_PART_NO)) AS ASSY_NO_TRIM
-     FROM MRP_MST
-     WHERE MRP_WORK_DT = '202511041552141984013e97254ba156'
-     and fsc_Cd = 'FSTC-CMT1H1HM01-153'
-     and fsc_ver = '004'
-     GROUP BY COMP_PART_NO, ASSY_PART_NO, COMP_QTY, TB_CD, PART_VER
+             COMP_PART_NO,
+             ASSY_PART_NO,
+             COMP_QTY,
+             TB_CD,
+             PART_VER,
+             LTRIM(RTRIM(COMP_PART_NO)) AS COMP_NO_TRIM,
+            LTRIM(RTRIM(ASSY_PART_NO)) AS ASSY_NO_TRIM
+        FROM MRP_MST AS M
+        JOIN PART_MST AS P ON P.PART_NO = M.COMP_PART_NO
+        WHERE MRP_WORK_DT = '202511041552141984013e97254ba156'
+            and fsc_Cd = 'FSTC-CMT1H1HM01-153'
+            and fsc_ver = '004'
+            and P.SECTION_NM = 'Frame'
+        GROUP BY COMP_PART_NO, ASSY_PART_NO, COMP_QTY, TB_CD, PART_VER
      )
  ,CTE AS(
      SELECT
@@ -454,6 +457,9 @@
 
         try
         {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
             string source_connectionString = Configuration.GetConnectionString("DefaultConnectionSourceSBMS");
 
             using (SqlConnection sourceConnection = new SqlConnection(source_connectionString))
@@ -463,21 +469,26 @@
                 // 테이블 데이터를 읽어오기
 
                 using (SqlCommand selectCommand = new SqlCommand(strQuery, sourceConnection))
-                using (SqlDataReader reader = selectCommand.ExecuteReader())
                 {
-                    while (reader.Read())
+                    selectCommand.CommandTimeout = 300; // 5분
+                    using (SqlDataReader reader = selectCommand.ExecuteReader())
                     {
-                        // 예시: 첫 번째 컬럼 값 읽기
-                        var col1 = reader[0];   // index로 읽기
-                        var col2 = reader[1];   // 컬럼명으로 읽기
+                        while (reader.Read())
+                        {
+                            // 예시: 첫 번째 컬럼 값 읽기
+                            var col1 = reader[0];   // index로 읽기
+                            var col2 = reader[1];   // 컬럼명으로 읽기
 
-                        Console.WriteLine($"{col1}, {col2}");
-                        tCountBom++;
+                            Console.WriteLine($"{col1}, {col2}");
+                            tCountBom++;
+                        }
                     }
                 }
             }
 
             Console.WriteLine("   * End of BOM Test. Count = {0}", tCountBom);
+            sw.Stop();
+            Console.WriteLine($"Query 실행시간: {sw.ElapsedMilliseconds} ms");
         }
         catch (Exception ex)
         {
