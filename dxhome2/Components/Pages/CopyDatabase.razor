@@ -39,7 +39,8 @@
             "_TSLSalesBillRelation",
             "_TSLSalesItem",
             "_TSLSales",
-            "_TDASMinorValue"
+            "_TDASMinorValue",
+            "_TESMBItemStdPrice"
     };
 
     int tCountBom = 0;
@@ -364,7 +365,7 @@
              ASSY_PART_NO,
              COMP_QTY,
              TB_CD,
-             PART_VER,
+             M.PART_VER,
              LTRIM(RTRIM(COMP_PART_NO)) AS COMP_NO_TRIM,
             LTRIM(RTRIM(ASSY_PART_NO)) AS ASSY_NO_TRIM
         FROM MRP_MST AS M
@@ -373,7 +374,7 @@
             and fsc_Cd = 'FSTC-CMT1H1HM01-153'
             and fsc_ver = '004'
             and P.SECTION_NM = 'Frame'
-        GROUP BY COMP_PART_NO, ASSY_PART_NO, COMP_QTY, TB_CD, PART_VER
+        GROUP BY COMP_PART_NO, ASSY_PART_NO, COMP_QTY, TB_CD, M.PART_VER
      )
  ,CTE AS(
      SELECT
@@ -452,7 +453,7 @@
      WHERE NOT EXISTS(SELECT 1 FROM UPGVC_MST um WHERE um.UPGVC_NO = a.COMP_PART_NO)
      ORDER BY a.COMP_PART_NO; ";
 
-        tCountBom = -1; // 임시
+        tCountBom = 0; // 임시
         Console.WriteLine("--- BOM Test");
 
         try
