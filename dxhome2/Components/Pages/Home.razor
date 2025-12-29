@@ -99,19 +99,19 @@
                         <TelerikButton OnClick="@GotoFIMS"><img style=@gStrSizeButton src="images/buttons/검사시스템FIMS.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
-                <TileLayoutItem HeaderText="CPK">
-                    <Content>
-                        <TelerikButton OnClick="@GotoCPK"><img style=@gStrSizeButton src="images/buttons/FIMS CPK.jpg" /></TelerikButton>
-                    </Content>
-                </TileLayoutItem>
                 <TileLayoutItem HeaderText="수리FIMS">
                     <Content>
                         <TelerikButton OnClick="@GotoFIMSModify"><img style=@gStrSizeButton src="images/buttons/수리검사시스템FIMS.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
-                <TileLayoutItem HeaderText="(해외)영업관리">
+                <TileLayoutItem HeaderText="CPK">
                     <Content>
-                        <TelerikButton OnClick="@GotoSales"><img style=@gStrSizeButton src="images/buttons/해외영업관리.jpg" /></TelerikButton>
+                        <TelerikButton OnClick="@GotoCPK"><img style=@gStrSizeButton src="images/buttons/FIMS CPK.jpg" /></TelerikButton>
+                    </Content>
+                </TileLayoutItem>
+                <TileLayoutItem HeaderText="COOLANT">
+                    <Content>
+                        <TelerikButton OnClick="@GotoCoolant"><img style=@gStrSizeButton src="images/buttons/FIMSCOOL.jpg" /></TelerikButton>
                     </Content>
                 </TileLayoutItem>
                 @*
@@ -200,6 +200,10 @@
     async void GotoCPK()
     {
         await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:5067", "_blank");
+    }
+    async void GotoCoolant()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://dxhome.fstc.co.kr:5068", "_blank");
     }
     async void GotoFIMSModify()
     {
