@@ -44,6 +44,8 @@
     };
 
     int tCountBom = 0;
+    [CascadingParameter]
+    public DialogFactory Dialogs { get; set; }
 
     protected override void OnInitialized()
     {
@@ -349,6 +351,7 @@
             }
 
             Console.WriteLine(iNum.ToString() + " table data inserted successfully!");
+            await Dialogs.AlertAsync(iNum.ToString()+" tables inserted", "Insert Completed");
         }
         catch (Exception ex)
         {
